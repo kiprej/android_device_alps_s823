@@ -1,5 +1,4 @@
 /dev/null                 0666   root       root
-/dev/null                 0666   root       root
 /dev/zero                 0666   root       root
 /dev/full                 0666   root       root
 /dev/ptmx                 0666   root       root
@@ -186,5 +185,3 @@
 /dev/touch              0660   root       system
 /dev/hotknot             0660    root system
 
-#powerkey monitor hang
-/dev/kick_powerkey        0600   system     system

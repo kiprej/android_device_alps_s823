@@ -4,7 +4,6 @@ import /init.modem.rc
 
 on early-init
     mount debugfs /sys/kernel/debug /sys/kernel/debug
-    write /sys/class/leds/lcd-backlight/trigger "backlight"
     setprop ro.mtk.hardware mt6582
 
 on charger

@@ -230,104 +230,6 @@ public class MediaTekRIL extends RIL implements CommandsInterface {
          throw new RuntimeException ("invalid hex char '" + c + "'");
     }
 
-    protected Object
-    responseOperatorInfos(Parcel p) {
-        if (mInstanceId == null || mInstanceId == 0) {
-            mSimId = 0;
-        } else {
-            mSimId = mInstanceId;
-        }
-
-        String strings[] = (String [])responseStrings(p);
-        ArrayList<OperatorInfo> ret;
-
-        if (strings.length % 5 != 0) {
-            throw new RuntimeException(
-                "RIL_REQUEST_QUERY_AVAILABLE_NETWORKS: invalid response. Got "
-                + strings.length + " strings, expected multible of 5");
-        }
-
-        String lacStr = SystemProperties.get("gsm.cops.lac");
-        boolean lacValid = false;
-        int lacIndex=0;
-
-        Rlog.d(RILJ_LOG_TAG, "lacStr = " + lacStr+" lacStr.length="+lacStr.length()+" strings.length="+strings.length);
-        if((lacStr.length() > 0) && (lacStr.length()%4 == 0) && ((lacStr.length()/4) == (strings.length/5 ))){
-            Rlog.d(RILJ_LOG_TAG, "lacValid set to true");
-            lacValid = true;
-        }
-
-        SystemProperties.set("gsm.cops.lac","");
-
-        ret = new ArrayList<OperatorInfo>(strings.length / 5);
-
-        for (int i = 0 ; i < strings.length ; i += 5) {
-            if((strings[i+0] != null) && (strings[i+0].startsWith("uCs2") == true)) {        
-                riljLog("responseOperatorInfos handling UCS2 format name");
-
-                try {
-                    strings[i+0] = new String(hexStringToBytes(strings[i+0].substring(4)), "UTF-16");
-                } catch(UnsupportedEncodingException ex) {
-                    riljLog("responseOperatorInfos UnsupportedEncodingException");
-                }
-            }
-
-            if ((lacValid == true) && (strings[i] != null)) {
-                UiccController uiccController = UiccController.getInstance();
-                IccRecords iccRecords = uiccController.getIccRecords(mSimId, UiccController.APP_FAM_3GPP);
-                int lacValue = -1;
-                String sEons = null;
-                String lac = lacStr.substring(lacIndex,lacIndex+4);
-                Rlog.d(RILJ_LOG_TAG, "lacIndex="+lacIndex+" lacValue="+lacValue+" lac="+lac+" plmn numeric="+strings[i+2]+" plmn name"+strings[i+0]);
-
-                if(lac != "") {
-                    lacValue = Integer.parseInt(lac, 16);
-                    lacIndex += 4;
-                    if(lacValue != 0xfffe) {
-                        /*sEons = iccRecords.getEonsIfExist(strings[i+2],lacValue,true);
-                        if(sEons != null) {
-                            strings[i] = sEons;           
-                            Rlog.d(RILJ_LOG_TAG, "plmn name update to Eons: "+strings[i]);
-                        }*/
-                    } else {
-                        Rlog.d(RILJ_LOG_TAG, "invalid lac ignored");
-                    }
-                }
-            }
-
-            if (strings[i] != null && (strings[i].equals("") || strings[i].equals(strings[i+2]))) {
-		Operators init = new Operators ();
-		String temp = init.unOptimizedOperatorReplace(strings[i+2]);
-		riljLog("lookup RIL responseOperatorInfos() " + strings[i+2] + " gave " + temp);
-                strings[i] = temp;
-                strings[i+1] = temp;
-            }
-
-            // 1, 2 = 2G
-            // > 2 = 3G
-            String property_name = "gsm.baseband.capability";
-            if(mSimId > 0) {
-                property_name = property_name + (mSimId+1);
-            }
-
-            int basebandCapability = SystemProperties.getInt(property_name, 3);
-            Rlog.d(RILJ_LOG_TAG, "property_name="+property_name+", basebandCapability=" + basebandCapability);
-            if (3 < basebandCapability) {
-                strings[i+0] = strings[i+0].concat(" " + strings[i+4]);
-                strings[i+1] = strings[i+1].concat(" " + strings[i+4]);
-            }
-
-            ret.add(
-                new OperatorInfo(
-                    strings[i+0],
-                    strings[i+1],
-                    strings[i+2],
-                    strings[i+3]));
-        }
-
-        return ret;
-    }
-
     private Object
     responseCrssNotification(Parcel p) {
         Rlog.e(RILJ_LOG_TAG, "NOT PROCESSING CRSS NOTIFICATION");
@@ -388,11 +290,10 @@ public class MediaTekRIL extends RIL implements CommandsInterface {
             case RIL_REQUEST_SWITCH_WAITING_OR_HOLDING_AND_ACTIVE: ret =  responseVoid(p); break;
             case RIL_REQUEST_CONFERENCE: ret =  responseVoid(p); break;
             case RIL_REQUEST_UDUB: ret =  responseVoid(p); break;
-            case RIL_REQUEST_LAST_CALL_FAIL_CAUSE: ret =  responseInts(p); break;
+            case RIL_REQUEST_LAST_CALL_FAIL_CAUSE: ret =  responseFailCause(p); break;
             case RIL_REQUEST_SIGNAL_STRENGTH: ret =  responseSignalStrength(p); break;
             case RIL_REQUEST_VOICE_REGISTRATION_STATE: ret =  responseStrings(p); break;
             case RIL_REQUEST_DATA_REGISTRATION_STATE: ret =  responseStrings(p); break;
-            case RIL_REQUEST_OPERATOR: ret =  responseOperator(p); break;
             case RIL_REQUEST_RADIO_POWER: ret =  responseVoid(p); break;
             case RIL_REQUEST_DTMF: ret =  responseVoid(p); break;
             case RIL_REQUEST_SEND_SMS: ret =  responseSMS(p); break;
@@ -418,7 +319,6 @@ public class MediaTekRIL extends RIL implements CommandsInterface {
             case RIL_REQUEST_QUERY_NETWORK_SELECTION_MODE: ret =  responseInts(p); break;
             case RIL_REQUEST_SET_NETWORK_SELECTION_AUTOMATIC: ret =  responseVoid(p); break;
             case RIL_REQUEST_SET_NETWORK_SELECTION_MANUAL: ret =  responseVoid(p); break;
-            case RIL_REQUEST_QUERY_AVAILABLE_NETWORKS : ret =  responseOperatorInfos(p); break;
             case RIL_REQUEST_DTMF_START: ret =  responseVoid(p); break;
             case RIL_REQUEST_DTMF_STOP: ret =  responseVoid(p); break;
             case RIL_REQUEST_BASEBAND_VERSION: ret =  responseString(p); break;
@@ -644,7 +544,6 @@ public class MediaTekRIL extends RIL implements CommandsInterface {
             case RIL_REQUEST_SIGNAL_STRENGTH: return "SIGNAL_STRENGTH";
             case RIL_REQUEST_VOICE_REGISTRATION_STATE: return "VOICE_REGISTRATION_STATE";
             case RIL_REQUEST_DATA_REGISTRATION_STATE: return "DATA_REGISTRATION_STATE";
-            case RIL_REQUEST_OPERATOR: return "OPERATOR";
             case RIL_REQUEST_RADIO_POWER: return "RADIO_POWER";
             case RIL_REQUEST_DTMF: return "DTMF";
             case RIL_REQUEST_SEND_SMS: return "SEND_SMS";
@@ -753,43 +652,6 @@ public class MediaTekRIL extends RIL implements CommandsInterface {
 	    case RIL_REQUEST_SET_3G_CAPABILITY: return "RIL_REQUEST_SET_3G_CAPABILITY";
             default: return "<unknown request>";
         }
-    }
-
-    private Object
-    responseOperator(Parcel p) {
-        int num;
-        String response[] = null;
-
-        response = p.readStringArray();
-
-        if (false) {
-            num = p.readInt();
-
-            response = new String[num];
-            for (int i = 0; i < num; i++) {
-                response[i] = p.readString();
-            }
-        }
-
-        if((response[0] != null) && (response[0].startsWith("uCs2") == true))
-        {        
-            riljLog("responseOperator handling UCS2 format name");			        
-            try{	
-                response[0] = new String(hexStringToBytes(response[0].substring(4)),"UTF-16");
-            }catch(UnsupportedEncodingException ex){
-                riljLog("responseOperatorInfos UnsupportedEncodingException");
-            }			
-        }
-		
-        if (response[0] != null && (response[0].equals("") || response[0].equals(response[2]))) {
-	    Operators init = new Operators ();
-	    String temp = init.unOptimizedOperatorReplace(response[2]);
-	    riljLog("lookup RIL responseOperator() " + response[2] + " gave " + temp + " was " + response[0] + "/" + response[1] + " before.");
-	    response[0] = temp;
-	    response[1] = temp;
-        }
-
-        return response;
     }
 
     private

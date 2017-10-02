@@ -122,7 +122,7 @@ PRODUCT_COPY_FILES += \
 
 # Camera
 PRODUCT_PACKAGES += \
-    Snap
+    Camu
 
 # Charger
 PRODUCT_PACKAGES += \

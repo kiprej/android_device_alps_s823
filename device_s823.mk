@@ -130,6 +130,13 @@ PRODUCT_PACKAGES += \
     charger_res_images \
     libnl_2 \
     libtinyxml
+
+# FM Radio
+PRODUCT_PACKAGES += \
+    FMRadioGoogle \
+    FmRadioTrampoline2
+
+
 # Media codecs
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/configs/media_codecs.xml:system/etc/media_codecs.xml \
